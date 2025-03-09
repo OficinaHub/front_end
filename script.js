@@ -1,70 +1,55 @@
+// Função para formatar o CPF
 function formatarCPF(cpf) {
-    cpf = cpf.replace(/\D/g, "");
+    cpf = cpf.replace(/\D/g, ""); // Remove todos os caracteres não numéricos
     cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2");
     cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2");
     cpf = cpf.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
     return cpf;
 }
 
+// Função para formatar o telefone
 function formatarTelefone(telefone) {
-    telefone = telefone.replace(/\D/g, "");
+    telefone = telefone.replace(/\D/g, ""); // Remove todos os caracteres não numéricos
     telefone = telefone.replace(/(\d{2})(\d)/, "($1) $2");
     telefone = telefone.replace(/(\d{5})(\d{4})$/, "$1-$2");
     return telefone;
 }
 
-document.getElementById("cpf").addEventListener("input", function(event) {
-    event.target.value = formatarCPF(event.target.value);
-});
 
-document.getElementById("telefone").addEventListener("input", function(event) {
-    event.target.value = formatarTelefone(event.target.value);
-});
+// Função para carregar clientes na tabela
+async function carregarClientes() {
+    const API_URL = "http://127.0.0.1:8000/api/clientes";
 
-document.getElementById("cadastroForm").addEventListener("submit", function(event) {
-    event.preventDefault();
-    
-    let nome = document.getElementById("nome").value.trim();
-    let cpf = document.getElementById("cpf").value.trim();
-    let telefone = document.getElementById("telefone").value.trim();
-    let mensagem = document.getElementById("mensagem");
-    
-    let cpfValido = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(cpf);
-    let telefoneValido = /^\(\d{2}\) \d{5}-\d{4}$/.test(telefone);
-    
-    if (!nome || !cpf || !telefone) {
-        mensagem.textContent = "Preencha todos os campos obrigatórios!";
-        mensagem.className = "error";
-        return;
+    try {
+        const response = await fetch(API_URL);
+        const clientes = await response.json();
+
+        const tabela = document.getElementById("clientesTable");
+        tabela.innerHTML = ""; // Limpa antes de adicionar novos dados
+
+        clientes.forEach(cliente => {
+            const linha = document.createElement("tr");
+            linha.innerHTML = `
+                <td>${cliente.nome}</td>
+                <td>${formatarCPF(cliente.CPF)}</td>
+                <td>${formatarTelefone(cliente.telefone)}</td>
+            `;
+            tabela.appendChild(linha);
+        });
+    } catch (error) {
+        console.error("Erro ao carregar clientes:", error);
+    }
+}
+
+// Chama as funções dependendo da página atual
+document.addEventListener('DOMContentLoaded', function () {
+    // Se estiver na página de clientes, carrega a lista
+    if (document.getElementById("clientesTable")) {
+        carregarClientes();
     }
 
-    if (!cpfValido) {
-        mensagem.textContent = "CPF inválido!";
-        mensagem.className = "error";
-        return;
+    // Se estiver na página de cadastro, adiciona evento ao formulário
+    if (document.getElementById("cadastroForm")) {
+        document.getElementById("cadastroForm").addEventListener("submit", cadastrarCliente);
     }
-
-    if (!telefoneValido) {
-        mensagem.textContent = "Telefone inválido!";
-        mensagem.className = "error";
-        return;
-    }
-    
-    let cliente = { nome, cpf, telefone };
-    
-    fetch("http://localhost:3000/clientes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cliente)
-    })
-    .then(response => response.json())
-    .then(data => {
-        mensagem.textContent = "Cliente cadastrado com sucesso!";
-        mensagem.className = "success";
-        document.getElementById("cadastroForm").reset();
-    })
-    .catch(error => {
-        mensagem.textContent = "Erro ao cadastrar cliente!";
-        mensagem.className = "error";
-    });
 });
